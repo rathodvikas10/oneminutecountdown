@@ -10,13 +10,13 @@ import androidx.core.app.NotificationManagerCompat
 import com.example.oneminutecountdown.R
 
 
-interface NotificationSender {
+interface NotificationService {
     fun send(notification: NotificationContext)
 }
 
-class AppNotificationSender(
+class AppNotificationService(
     private val context: Context,
-) : NotificationSender {
+) : NotificationService {
     override fun send(notification: NotificationContext) {
         val builder = NotificationCompat.Builder(context, NotificationUtils.CHANNEL_ID)
         builder.setContentTitle(notification.title)

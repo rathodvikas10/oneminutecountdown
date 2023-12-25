@@ -1,50 +1,46 @@
 package com.example.oneminutecountdown.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.oneminutecountdown.domain.CountDownListener
-import com.example.oneminutecountdown.domain.OneMinuteTimer
-import com.example.oneminutecountdown.notification.CountDownNotificationController
-import com.example.oneminutecountdown.utils.format
+import com.example.oneminutecountdown.domain.OneMinuteCountDownUseCase
+import com.example.oneminutecountdown.domain.ProgressInfo
+import com.example.oneminutecountdown.notification.NotificationController
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class OneMinuteCountDownViewModel(
-    private val oneMinuteTimer: OneMinuteTimer,
+    private val oneMinuteCountDown: OneMinuteCountDownUseCase,
+    private val notificationController: NotificationController,
     private val dispatcher: CoroutineDispatcher,
-    private val countDownNotificationController: CountDownNotificationController
-) : ViewModel(), CountDownListener, DefaultLifecycleObserver {
+) : ViewModel(), DefaultLifecycleObserver {
 
-    private val scope = CoroutineScope(dispatcher)
+    private val mScope = CoroutineScope(dispatcher + SupervisorJob())
     private val _uiState = MutableStateFlow(UIState.INITIAL)
     val uiState = _uiState
 
     private var isInBackground = false
 
-    init {
-        oneMinuteTimer.setOnCountDownListener(this)
-    }
-
     fun start() {
-        scope.launch(dispatcher) {
-            oneMinuteTimer.play()
-            _uiState.update { current ->
-                current.copy(
-                    timerState = UIState.TimerState.RUNNING
-                )
+        viewModelScope
+        mScope.launch(dispatcher) {
+            oneMinuteCountDown.play { progressInfo ->
+                _uiState.tryEmit(progressInfo.toUIState())
+                if(progressInfo.finish) {
+                    showNotificationWhenInBackground()
+                }
             }
         }
     }
 
     fun pause() {
         viewModelScope.launch(dispatcher) {
-            oneMinuteTimer.pause()
+            oneMinuteCountDown.pause()
             _uiState.update { current ->
                 current.copy(
                     timerState = UIState.TimerState.PAUSED
@@ -55,39 +51,13 @@ class OneMinuteCountDownViewModel(
 
     fun stop() {
         viewModelScope.launch(dispatcher) {
-            oneMinuteTimer.stop()
+            oneMinuteCountDown.stop()
             _uiState.update { current ->
                 current.copy(
                     timerState = UIState.TimerState.STOPPED,
                     progress = 0f,
                     tickerText = "00:00:00"
                 )
-            }
-        }
-    }
-
-    override fun onTick() {
-        scope.launch(dispatcher) {
-            _uiState.update { current ->
-                current.copy(
-                    progress = (oneMinuteTimer.getElapsedTime().toFloat() / oneMinuteTimer.duration.toFloat()) * 100f,
-                    tickerText = oneMinuteTimer.getRemainingTime().format()
-                )
-            }
-        }
-    }
-
-    override fun onFinish() {
-        scope.launch(dispatcher) {
-            _uiState.update { current ->
-                current.copy(
-                    timerState = UIState.TimerState.IDEAL,
-                    progress = (oneMinuteTimer.getElapsedTime().toFloat() / oneMinuteTimer.duration.toFloat()) * 100f,
-                    tickerText = oneMinuteTimer.getRemainingTime().format()
-                )
-            }
-            if(isInBackground) {
-                countDownNotificationController.sendTimeUpNotification()
             }
         }
     }
@@ -99,22 +69,16 @@ class OneMinuteCountDownViewModel(
     override fun onResume(owner: LifecycleOwner) {
         isInBackground = false
     }
-}
 
-sealed class UIState {
-    enum class TimerState {
-        IDEAL, RUNNING, PAUSED, STOPPED
+    private fun showNotificationWhenInBackground() {
+        if(isInBackground) {
+            notificationController.sendTimeUpNotification()
+        }
     }
-    companion object {
-        val INITIAL = CountDownState(
-            timerState = TimerState.IDEAL,
-            progress = 0f,
-            tickerText = "00:00:00"
-        )
-    }
-    data class CountDownState(
-        val timerState: TimerState,
-        val progress: Float,
-        val tickerText: String
-    ) : UIState()
+
+    private fun ProgressInfo.toUIState() = UIState.CountDownState(
+        timerState = if(progress >= 100F) UIState.TimerState.IDEAL else UIState.TimerState.RUNNING,
+        progress = progress,
+        tickerText = tickerText
+    )
 }

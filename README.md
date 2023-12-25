@@ -12,5 +12,5 @@ Create a new Android project using Jetpack Compose
 7. The app should post a system notification when the timer ends if the app is in the background
 
 # Video
-Self introduction: [link](https://www.loom.com/share/03db484e39b04a23b1c1971ab5567800?sid=d0db2f05-4ad9-4ef1-bc9e-e260c184835c)
-Project Demonstration: [link](https://www.loom.com/share/25d39cc3c52e4504b33484459414223a?sid=cbc53502-6cf7-49f7-b37d-9d16ec9106e7)
+Self introduction: [link](https://www.loom.com/share/03db484e39b04a23b1c1971ab5567800?sid=d0db2f05-4ad9-4ef1-bc9e-e260c184835c) \
+Project Demonstration: [link](https://www.loom.com/share/3cfeccfff485415e8fc841b71d4ae471?sid=eca96445-2a8e-477f-aa75-7a0139d77d96)
