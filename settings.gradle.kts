@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OneMinuteCountDown"
+rootProject.name = "oneminutecountdown"
 include(":app")
